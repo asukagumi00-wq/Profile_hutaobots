@@ -46,6 +46,26 @@ function boolean(value, fallback = false) {
   return fallback
 }
 
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function validEmail(value) {
+  const email = normalizeEmail(value)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(email) && email.length <= 120
+}
+
+function maskedEmail(value) {
+  const email = normalizeEmail(value)
+
+  if (!validEmail(email)) {
+    return '(silahkan ketik .addemail untuk menambah data)'
+  }
+
+  const domain = email.split('@')[1]
+  return `••••••@${domain}`
+}
+
 function avatarUrl(value) {
   const url = String(value || '').trim()
 
@@ -66,6 +86,7 @@ function profileDocument(profile) {
     phone: htmlEscape(profile.phone || profile.nomor || profile.number || profile.whatsapp || profile.wa || ''),
     name: htmlEscape(profile.name || 'User'),
     age: number(profile.age ?? profile.umur, 0),
+    emailDisplay: htmlEscape(maskedEmail(profile.email)),
     bio: String(profile.bio || '').slice(0, 160),
     limit: Math.max(0, number(profile.limit, 0)),
     maxLimit: Math.max(
@@ -157,6 +178,10 @@ function profileDocument(profile) {
         <article class="info-box">
           <span>Nomor WhatsApp</span>
           <strong id="phone">${safe.phone || '-'}</strong>
+        </article>
+        <article class="info-box">
+          <span>Email</span>
+          <strong id="email">${safe.emailDisplay}</strong>
         </article>
         <article class="info-box">
           <span>Terdaftar</span>
@@ -302,6 +327,7 @@ export default {
         ...body,
         phone,
         name: String(body.name || 'User').slice(0, 40),
+        email: validEmail(body.email) ? normalizeEmail(body.email) : '',
         bio: String(body.bio || '').slice(0, 160),
         registered: boolean(body.registered ?? body.isRegistered, true),
         regTime: timestamp(
