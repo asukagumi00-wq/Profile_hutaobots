@@ -1,4 +1,4 @@
-name = "profile-hutaobots"
+name = "loginbotshutao"
 main = "src/worker.js"
 compatibility_date = "2026-08-03"
 
@@ -8,3 +8,4 @@ binding = "ASSETS"
 
 [[kv_namespaces]]
 binding = "USER_PROFILES"
+id = "GANTI_DENGAN_KV_NAMESPACE_ID"
