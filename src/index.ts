@@ -143,7 +143,7 @@ function profileDocument(profile) {
   <main class="page-shell">
     <header class="hero">
       <a class="brand" href="/" aria-label="Hu Tao Bots">
-        <img src="/assets/logo.svg" alt="">
+        <img src="/assets/logo.png" alt="">
         <div>
           <strong><span>Hu Tao</span> Bots</strong>
           <small>WhatsApp User Profile</small>
