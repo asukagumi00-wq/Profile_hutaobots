@@ -25,23 +25,79 @@ function number(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
+function timestamp(value, fallback = 0) {
+  if (value === null || value === undefined || value === '') return fallback
+
+  const numeric = Number(value)
+  if (Number.isFinite(numeric)) return numeric
+
+  const parsed = Date.parse(String(value))
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function boolean(value, fallback = false) {
+  if (value === null || value === undefined || value === '') return fallback
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value !== 0
+
+  const normalized = String(value).trim().toLowerCase()
+  if (['true', 'yes', 'ya', '1', 'registered', 'terdaftar'].includes(normalized)) return true
+  if (['false', 'no', 'tidak', '0', 'unregistered', 'belum'].includes(normalized)) return false
+  return fallback
+}
+
+function avatarUrl(value) {
+  const url = String(value || '').trim()
+
+  // URL ini hanya placeholder, jadi gunakan avatar bawaan dari Assets.
+  if (!url || url === 'https://i.imgur.com/default.png' || /\/default\.png(?:\?.*)?$/i.test(url)) {
+    return DEFAULT_AVATAR
+  }
+
+  if (!/^https?:\/\//i.test(url) && !url.startsWith('/')) {
+    return DEFAULT_AVATAR
+  }
+
+  return url
+}
+
 function profileDocument(profile) {
   const safe = {
-    phone: htmlEscape(profile.phone || ''),
+    phone: htmlEscape(profile.phone || profile.nomor || profile.number || profile.whatsapp || profile.wa || ''),
     name: htmlEscape(profile.name || 'User'),
     age: number(profile.age ?? profile.umur, 0),
     bio: String(profile.bio || '').slice(0, 160),
     limit: Math.max(0, number(profile.limit, 0)),
-    maxLimit: Math.max(1, number(profile.maxLimit, 20)),
+    maxLimit: Math.max(
+      1,
+      number(profile.maxLimit, Math.max(1, number(profile.limit, 20)))
+    ),
     money: number(profile.money, 0),
     exp: Math.max(0, number(profile.exp, 0)),
     level: Math.max(0, number(profile.level, 0)),
     role: htmlEscape(profile.role || 'Newbie'),
-    premium: Boolean(profile.premium),
-    regTime: number(profile.regTime, 0),
+    premium: boolean(profile.premium, false),
+    registered: boolean(
+      profile.registered ??
+      profile.isRegistered ??
+      profile.regTime ??
+      profile.registeredAt ??
+      profile.createdAt,
+      false
+    ),
+    regTime: timestamp(profile.regTime ?? profile.registeredAt ?? profile.createdAt, 0),
     totalCommand: Math.max(0, number(profile.totalCommand, 0)),
     lastActive: number(profile.lastActive, Date.now()),
-    profilePicture: htmlEscape(profile.profilePicture || DEFAULT_AVATAR),
+    profilePicture: htmlEscape(
+      avatarUrl(
+        profile.profilePicture ||
+        profile.profilePic ||
+        profile.photo ||
+        profile.avatar ||
+        profile.pp ||
+        profile.picture
+      )
+    ),
     updatedAt: htmlEscape(profile.updatedAt || '')
   }
 
@@ -75,7 +131,7 @@ function profileDocument(profile) {
 
       <div class="avatar-wrap">
         <div class="avatar-ring"></div>
-        <img id="profile-picture" class="avatar" src="${safe.profilePicture}" alt="Foto profil WhatsApp">
+        <img id="profile-picture" class="avatar" src="${safe.profilePicture}" alt="Foto profil WhatsApp" onerror="this.onerror=null;this.src='${DEFAULT_AVATAR}'">
         <span class="online-dot" title="Tersinkron"></span>
       </div>
     </header>
@@ -92,19 +148,19 @@ function profileDocument(profile) {
       <div class="info-grid">
         <article class="info-box">
           <span>Nama</span>
-          <strong id="name"></strong>
+          <strong id="name">${safe.name}</strong>
         </article>
         <article class="info-box">
           <span>Umur</span>
-          <strong id="age"></strong>
+          <strong id="age">${safe.age ? `${safe.age} tahun` : '-'}</strong>
         </article>
         <article class="info-box">
           <span>Nomor WhatsApp</span>
-          <strong id="phone"></strong>
+          <strong id="phone">${safe.phone || '-'}</strong>
         </article>
         <article class="info-box">
           <span>Terdaftar</span>
-          <strong id="registered"></strong>
+          <strong id="registered">${safe.registered ? 'Ya' : 'Tidak'}</strong>
         </article>
       </div>
     </section>
@@ -183,6 +239,37 @@ function profileDocument(profile) {
 
   <script>window.__PROFILE__=${serialized}</script>
   <script src="/assets/app.js" defer></script>
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const profile = window.__PROFILE__ || {}
+
+        const phone = document.getElementById('phone')
+        if (phone) phone.textContent = profile.phone || '-'
+
+        const registered = document.getElementById('registered')
+        if (registered) {
+          registered.textContent = profile.registered
+            ? (profile.regTime
+                ? new Intl.DateTimeFormat('id-ID', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  }).format(new Date(profile.regTime))
+                : 'Ya')
+            : 'Tidak'
+        }
+
+        const picture = document.getElementById('profile-picture')
+        if (picture) {
+          picture.onerror = () => {
+            picture.onerror = null
+            picture.src = '${DEFAULT_AVATAR}'
+          }
+        }
+      }, 0)
+    }, { once: true })
+  </script>
 </body>
 </html>`
 }
@@ -216,6 +303,24 @@ export default {
         phone,
         name: String(body.name || 'User').slice(0, 40),
         bio: String(body.bio || '').slice(0, 160),
+        registered: boolean(body.registered ?? body.isRegistered, true),
+        regTime: timestamp(
+          body.regTime ?? body.registeredAt ?? body.createdAt,
+          0
+        ),
+        maxLimit: Math.max(
+          1,
+          number(body.maxLimit, Math.max(1, number(body.limit, 20)))
+        ),
+        premium: boolean(body.premium, false),
+        profilePicture: avatarUrl(
+          body.profilePicture ||
+          body.profilePic ||
+          body.photo ||
+          body.avatar ||
+          body.pp ||
+          body.picture
+        ),
         updatedAt: new Date().toISOString()
       }
 
@@ -229,7 +334,16 @@ export default {
         return env.ASSETS.fetch(new Request(new URL('/404.html', url), request))
       }
 
-      return new Response(profileDocument(JSON.parse(raw)), {
+      let profile
+      try {
+        profile = JSON.parse(raw)
+      } catch {
+        return json({ ok: false, error: 'Data profil di KV bukan JSON valid' }, 500)
+      }
+
+      profile.phone = profile.phone || profile.nomor || profile.number || profile.whatsapp || profile.wa || path
+
+      return new Response(profileDocument(profile), {
         headers: {
           'content-type': 'text/html; charset=UTF-8',
           'cache-control': 'no-store',
