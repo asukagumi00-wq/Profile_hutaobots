@@ -1,5 +1,5 @@
-name = "loginbotshutao"
-main = "src/worker.js"
+name = "profile-hutaobots"
+main = "src/index.ts"
 compatibility_date = "2026-08-03"
 
 [assets]
@@ -7,5 +7,5 @@ directory = "./public"
 binding = "ASSETS"
 
 [[kv_namespaces]]
-binding = "USER_PROFILES"
-id = "GANTI_DENGAN_KV_NAMESPACE_ID"
+binding = "KV"
+id = "958e0894ae8543c4ae18084b5e75ae5e"
